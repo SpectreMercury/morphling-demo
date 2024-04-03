@@ -10,10 +10,8 @@ export const addressToLockScript = (address: string, config: Config | undefined)
   // config = config || DefaultConfig
   const env = address.slice(0, 3)
   config = config || (env === 'ckt' ? DefaultConfig.TestnetConig : DefaultConfig.MainnetConfig)
-  console.log(config)
   try {
-    const { words, prefix } = bech32m.decode(address)
-    console.log(words);
+    const { words, prefix } = bech32m.decode(address, BECH32_LIMIT)
     if (prefix !== config.PREFIX) {
       throw Error(`Invalid prefix! Expected: ${config.PREFIX}, actual: ${prefix}`)
     }

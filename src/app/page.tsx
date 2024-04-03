@@ -4,6 +4,8 @@ import { connect } from "@joyid/ckb";
 import { useState } from "react";
 import { capacity_buildTxSkeletonWithOutWitness, capacity_createRawTransactionForJoyID } from "@/Morphling/Transaction";
 import { MainnetRPC, TestnetRPC } from "@/Morphling/Config";
+import { bech32, bech32m } from "bech32";
+import { BECH32_LIMIT } from "@/Morphling/types/bytes";
 
 export default function Home() {
 
@@ -16,7 +18,7 @@ export default function Home() {
     setWalletInfo(JoyIDWalletConnection.address);
   }
 
-  const createRawTransaction = async() => {
+  const createRawTransaction = async() => {    
     let RawTx = await capacity_createRawTransactionForJoyID(
       walletInfo!!,
       toAddress,

@@ -1,7 +1,7 @@
 import { Indexer } from '@ckb-lumos/ckb-indexer'
 import { DefaultConfig, MAX_FEE, MainnetRPC, TestnetRPC } from '../Config'
 import { Cell, CellDep, RawTransaction, TransactionSkeletonInterface } from '../types/transaction'
-import { addressToLockScript } from '../Wallet/address'
+import { addressToLockScript } from '../Wallet/address';
 import { Config, Script } from '../types/config'
 import { BI, parseUnit } from '../base/number'
 import { List, Map as ImmutableMap } from 'immutable'
@@ -20,7 +20,7 @@ export const collecteCell = async (
   const collectCells: Cell[] = []
   let collector = indexer.collector({
     //@ts-ignore
-    lock: helpers.parseAddress(address, {config: DefaultConfig.TestnetConig}),
+    lock: addressToLockScript(address, DefaultConfig.TestnetConig),
     //@ts-ignore
     type: typeScript ? typeScript : 'empty'
   })
@@ -103,7 +103,7 @@ export const capacity_buildTxSkeletonWithOutWitness = async (
   outputs.push({
     data: '0x',
     cellOutput: {
-      lock: helpers.parseAddress(toAddress, {config: DefaultConfig.TestnetConig}),
+      lock: addressToLockScript(toAddress, DefaultConfig.TestnetConig),
       capacity: sendAmount.toHexString()
     }
   })
@@ -113,15 +113,15 @@ export const capacity_buildTxSkeletonWithOutWitness = async (
     outputs.push({
       data: '0x',
       cellOutput: {
-        lock: helpers.parseAddress(toAddress, {config: DefaultConfig.TestnetConig}),
+        lock: addressToLockScript(toAddress, DefaultConfig.TestnetConig),
         capacity: changeAmount.toHexString()
       }
     })
   }
 
   const cellDeps = List<CellDep>()
-  const fromScript = helpers.parseAddress(toAddress, {config: DefaultConfig.TestnetConig});
-  const toScript = helpers.parseAddress(toAddress, {config: DefaultConfig.TestnetConig});
+  const fromScript = addressToLockScript(toAddress, DefaultConfig.TestnetConig);
+  const toScript = addressToLockScript(toAddress, DefaultConfig.TestnetConig);
 
   const fromCellDep = getCellsDepByScript(fromScript, { isMainnet, config: options.config })
   if (fromCellDep) {
@@ -250,7 +250,7 @@ export const capacity_createRawTransactionForJoyID = async (
   if (txSkeleton) {
     const result = assembleWitnesses_joyID(
       txSkeleton,
-      helpers.parseAddress(fromAddress, {config: DefaultConfig.TestnetConig})
+      addressToLockScript(fromAddress, DefaultConfig.TestnetConig)
     )
     console.log(result);
 
