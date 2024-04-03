@@ -2,7 +2,7 @@
 
 import { connect } from "@joyid/ckb";
 import { useState } from "react";
-import { capacity_createRawTransactionForJoyID } from "@/Morphling/Transaction";
+import { capacity_buildTxSkeletonWithOutWitness, capacity_createRawTransactionForJoyID } from "@/Morphling/Transaction";
 import { MainnetRPC, TestnetRPC } from "@/Morphling/Config";
 
 export default function Home() {
@@ -25,7 +25,12 @@ export default function Home() {
         RPCUrl: walletInfo?.slice(0,3) === 'ckt' ? TestnetRPC : MainnetRPC
       }
     )  
-    console.log(RawTx);
+    const Txx = capacity_buildTxSkeletonWithOutWitness(walletInfo!!,
+      toAddress,
+      amount,
+      {
+        RPCUrl: walletInfo?.slice(0,3) === 'ckt' ? TestnetRPC : MainnetRPC
+      })
   }
   
 
