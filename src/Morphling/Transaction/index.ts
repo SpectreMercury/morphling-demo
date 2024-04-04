@@ -145,7 +145,7 @@ export const capacity_buildTxSkeletonWithOutWitness = async (
     outputs.push({
       data: "0x",
       cellOutput: {
-        lock: addressToLockScript(toAddress, DefaultConfig.TestnetConig),
+        lock: addressToLockScript(fromAddress, DefaultConfig.TestnetConig),
         capacity: changeAmount.toHexString(),
       },
     });
