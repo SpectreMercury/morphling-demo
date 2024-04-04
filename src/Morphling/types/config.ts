@@ -2,10 +2,10 @@ import { Hash, HashType, HexString } from "./transaction";
 
 export interface ScriptConfig {
   CODE_HASH: string;
-  HASH_TYPE: "type" | "data"; 
+  HASH_TYPE: "type" | "data";
   TX_HASH: string;
   INDEX: string;
-  DEP_TYPE: "depGroup" | "code"; 
+  DEP_TYPE: "depGroup" | "code";
   SHORT_ID?: number;
 }
 
@@ -18,6 +18,7 @@ export interface Config {
     SUDT: ScriptConfig;
     ANYONE_CAN_PAY: ScriptConfig;
     OMNILOCK: ScriptConfig;
+    JOYIDLOCK: ScriptConfig;
   };
 }
 

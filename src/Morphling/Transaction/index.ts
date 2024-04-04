@@ -1,12 +1,16 @@
-import { Indexer } from '@ckb-lumos/ckb-indexer'
-import { DefaultConfig, MAX_FEE, MainnetRPC, TestnetRPC } from '../Config'
-import { Cell, CellDep, RawTransaction, TransactionSkeletonInterface } from '../types/transaction'
-import { addressToLockScript } from '../Wallet/address';
-import { Config, Script } from '../types/config'
-import { BI, parseUnit } from '../base/number'
-import { List, Map as ImmutableMap } from 'immutable'
-import { assembleWitnesses_joyID } from '../base/witness'
-import { helpers } from '@ckb-lumos/lumos';
+import { Indexer } from "@ckb-lumos/ckb-indexer";
+import { DefaultConfig, MAX_FEE, MainnetRPC, TestnetRPC } from "../Config";
+import {
+  Cell,
+  CellDep,
+  RawTransaction,
+  TransactionSkeletonInterface,
+} from "../types/transaction";
+import { addressToLockScript } from "../Wallet/address";
+import { Config, Script } from "../types/config";
+import { BI, parseUnit } from "../base/number";
+import { List, Map as ImmutableMap } from "immutable";
+import { assembleWitnesses_joyID } from "../base/witness";
 
 export const collecteCell = async (
   address: string,
@@ -14,140 +18,157 @@ export const collecteCell = async (
   config?: Config,
   typeScript?: Script
 ) => {
-  const prefix = address.slice(0, 3)
-  const RPCURL = RPCUrl ? RPCUrl : prefix.toLocaleLowerCase() === 'ckt' ? TestnetRPC : MainnetRPC
-  const indexer = new Indexer(RPCURL)
-  const collectCells: Cell[] = []
+  const prefix = address.slice(0, 3);
+  const RPCURL = RPCUrl
+    ? RPCUrl
+    : prefix.toLocaleLowerCase() === "ckt"
+    ? TestnetRPC
+    : MainnetRPC;
+  const indexer = new Indexer(RPCURL);
+  const collectCells: Cell[] = [];
   let collector = indexer.collector({
     //@ts-ignore
     lock: addressToLockScript(address, DefaultConfig.TestnetConig),
     //@ts-ignore
-    type: typeScript ? typeScript : 'empty'
-  })
+    type: typeScript ? typeScript : "empty",
+  });
 
   for await (const cell of collector.collect()) {
-    collectCells.push(cell)
+    collectCells.push(cell);
   }
 
-  return collectCells
-}
+  return collectCells;
+};
 
 export const getCellsDepByScript = (
   script: Script,
   options: {
-    isMainnet: boolean
-    config: Config | undefined
+    isMainnet: boolean;
+    config: Config | undefined;
   }
 ) => {
   const config =
     options.config ||
-    (!options.isMainnet ? DefaultConfig.TestnetConig : DefaultConfig.MainnetConfig)
+    (!options.isMainnet
+      ? DefaultConfig.TestnetConig
+      : DefaultConfig.MainnetConfig);
 
   for (const key in config.SCRIPTS) {
     if (Object.prototype.hasOwnProperty.call(config.SCRIPTS, key)) {
       //@ts-ignore
-      const scriptConfig: ScriptConfig = config.SCRIPTS[key]
-      if (script.codeHash == scriptConfig.CODE_HASH && script.hashType == scriptConfig.HASH_TYPE) {
+      const scriptConfig: ScriptConfig = config.SCRIPTS[key];
+      if (
+        script.codeHash == scriptConfig.CODE_HASH &&
+        script.hashType == scriptConfig.HASH_TYPE
+      ) {
         const cellDep: CellDep = {
           outPoint: {
             txHash: scriptConfig.TX_HASH,
-            index: scriptConfig.INDEX
+            index: scriptConfig.INDEX,
           },
-          depType: scriptConfig.DEP_TYPE
-        }
-        return cellDep
+          depType: scriptConfig.DEP_TYPE,
+        };
+        return cellDep;
       }
     }
   }
-}
+};
 
 export const capacity_buildTxSkeletonWithOutWitness = async (
   fromAddress: string,
   toAddress: string,
   amount: string | number,
   options: {
-    RPCUrl: string
-    config?: Config
-    fee?: string | number
+    RPCUrl: string;
+    config?: Config;
+    fee?: string | number;
   }
 ) => {
-  const env = fromAddress.slice(0, 3)
-  const isMainnet = env === 'ckt' ? false : true
+  const env = fromAddress.slice(0, 3);
+  const isMainnet = env === "ckt" ? false : true;
 
-  const cells = await collecteCell(fromAddress, options.RPCUrl, options.config)
+  const cells = await collecteCell(fromAddress, options.RPCUrl, options.config);
 
-  const inputs: List<Cell> = List<Cell>()
-  const outputs: List<Cell> = List<Cell>()
-  const inputSinces: ImmutableMap<number, string> = ImmutableMap<number, string>()
+  const inputs: Cell[] = [];
+  const outputs: Cell[] = [];
+  const inputSinces: { [key: number]: string } = {};
 
-  let payAmount = BI.from(0)
-  const fee = options.fee ? BI.from(parseUnit(options.fee.toString(), 'ckb')) : MAX_FEE
-  const sendAmount = BI.from(amount)
+  let payAmount = BI.from(0);
+  const fee = options.fee
+    ? BI.from(parseUnit(options.fee.toString(), "ckb"))
+    : MAX_FEE;
+  const sendAmount = BI.from(parseUnit(amount.toString(), "ckb"));
 
   for (let i = 0; i < cells.length; i++) {
-    const cell = cells[i]
+    const cell = cells[i];
 
-    inputs.push(cell)
-    payAmount = payAmount.add(cell.cellOutput.capacity)
-    inputSinces.set(i, '0x0')
+    inputs.push(cell);
+    payAmount = payAmount.add(cell.cellOutput.capacity);
+    inputSinces[i] = "0x0";
 
     if (payAmount.gte(sendAmount.add(fee))) {
-      break
+      break;
     }
   }
 
   if (payAmount.lt(sendAmount.add(fee))) {
-    return
+    return;
   }
 
   outputs.push({
-    data: '0x',
+    data: "0x",
     cellOutput: {
       lock: addressToLockScript(toAddress, DefaultConfig.TestnetConig),
-      capacity: sendAmount.toHexString()
-    }
-  })
+      capacity: sendAmount.toHexString(),
+    },
+  });
 
-  const changeAmount = payAmount.sub(sendAmount).sub(fee)
+  const changeAmount = payAmount.sub(sendAmount).sub(fee);
   if (changeAmount.gt(0)) {
     outputs.push({
-      data: '0x',
+      data: "0x",
       cellOutput: {
         lock: addressToLockScript(toAddress, DefaultConfig.TestnetConig),
-        capacity: changeAmount.toHexString()
-      }
-    })
+        capacity: changeAmount.toHexString(),
+      },
+    });
   }
 
-  const cellDeps = List<CellDep>()
+  const cellDeps: CellDep[] = [];
   const fromScript = addressToLockScript(toAddress, DefaultConfig.TestnetConig);
   const toScript = addressToLockScript(toAddress, DefaultConfig.TestnetConig);
 
-  const fromCellDep = getCellsDepByScript(fromScript, { isMainnet, config: options.config })
+  const fromCellDep = getCellsDepByScript(fromScript, {
+    isMainnet,
+    config: options.config,
+  });
   if (fromCellDep) {
     const findItem = cellDeps.find(
-      v =>
+      (v) =>
         v.depType == fromCellDep.depType &&
         v.outPoint.txHash == fromCellDep.outPoint.txHash &&
         v.outPoint.index == fromCellDep.outPoint.index
-    )
+    );
 
     if (!findItem) {
-      cellDeps.push(fromCellDep)
+      cellDeps.push(fromCellDep);
     }
   }
 
-  const toCellDep = getCellsDepByScript(toScript, { isMainnet, config: options.config })
+  const toCellDep = getCellsDepByScript(toScript, {
+    isMainnet,
+    config: options.config,
+  });
   if (toCellDep) {
     const findItem = cellDeps.find(
-      v =>
+      (v) =>
         v.depType == toCellDep.depType &&
         v.outPoint.txHash == toCellDep.outPoint.txHash &&
         v.outPoint.index == toCellDep.outPoint.index
-    )
+    );
 
     if (!findItem) {
-      cellDeps.push(toCellDep)
+      cellDeps.push(toCellDep);
     }
   }
 
@@ -157,68 +178,70 @@ export const capacity_buildTxSkeletonWithOutWitness = async (
     outputs,
     inputSinces,
     cellDeps,
-    witnesses: List<string>(),
-    headerDeps: List<string>(),
-    fixedEntries: List<{ field: string; index: number }>(),
-    signingEntries: List<{ type: string; index: number; message: string }>()
-  }
+    witnesses: [],
+    headerDeps: [],
+    fixedEntries: [],
+    signingEntries: [],
+  };
 
-  return txSkeleton
-}
+  return txSkeleton;
+};
 
-export const createRawTransaction = (txSkeleton: TransactionSkeletonInterface) => {
+export const createRawTransaction = (
+  txSkeleton: TransactionSkeletonInterface
+) => {
   const rawTx: RawTransaction = {
-    version: '0x0',
+    version: "0x0",
     cellDeps: [],
     headerDeps: [],
     inputs: [],
     outputs: [],
     outputsData: [],
-    witnesses: []
-  }
+    witnesses: [],
+  };
 
   // cellDeps
-  for (let i = 0; i < txSkeleton.cellDeps.size; i++) {
-    const cellDep = txSkeleton.cellDeps.get(i)
-    if (cellDep) rawTx.cellDeps.push(cellDep)
+  for (let i = 0; i < txSkeleton.cellDeps.length; i++) {
+    const cellDep = txSkeleton.cellDeps[i];
+    if (cellDep) rawTx.cellDeps.push(cellDep);
   }
   // headerDeps
-  for (let i = 0; i < txSkeleton.headerDeps.size; i++) {
-    const header = txSkeleton.headerDeps.get(i)
-    if (header) rawTx.headerDeps.push(header)
+  for (let i = 0; i < txSkeleton.headerDeps.length; i++) {
+    const header = txSkeleton.headerDeps[i];
+    if (header) rawTx.headerDeps.push(header);
   }
   // inputs
-  for (let i = 0; i < txSkeleton.inputs.size; i++) {
-    const input = txSkeleton.inputs.get(i)
-    const inputSince = txSkeleton.inputSinces.get(i)
+  for (let i = 0; i < txSkeleton.inputs.length; i++) {
+    const input = txSkeleton.inputs[i];
+    const inputSince = txSkeleton.inputSinces[i];
     if (input && input.outPoint && inputSince) {
       rawTx.inputs.push({
         previousOutput: {
           txHash: input.outPoint.txHash,
-          index: input.outPoint.index
+          index: input.outPoint.index,
         },
-        since: inputSince
-      })
+        since: inputSince,
+      });
     }
   }
   // outputs and outputsData
-  for (let i = 0; i < txSkeleton.outputs.size; i++) {
-    const output = txSkeleton.outputs.get(i)
+  for (let i = 0; i < txSkeleton.outputs.length; i++) {
+    const output = txSkeleton.outputs[i];
     if (output) {
-      rawTx.outputs.push(output.cellOutput)
-      rawTx.outputsData.push(output.data)
+      rawTx.outputs.push(output.cellOutput);
+      rawTx.outputsData.push(output.data);
     }
   }
   // witness
-  for (let i = 0; i < txSkeleton.witnesses.size; i++) {
-    const witnessItem = txSkeleton.witnesses.get(i)
+  for (let i = 0; i < txSkeleton.witnesses.length; i++) {
+    const witnessItem = txSkeleton.witnesses[i];
     if (witnessItem) {
-      rawTx.witnesses.push(witnessItem)
+      rawTx.witnesses.push(witnessItem);
     }
   }
 
-  return rawTx
-}
+  return rawTx;
+};
 
 /*
 import { signRawTransaction } from "@joyid/ckb";
@@ -232,33 +255,30 @@ export const capacity_createRawTransactionForJoyID = async (
   toAddress: string,
   amount: string | number,
   options: {
-    RPCUrl: string
-    config?: Config
-    fee?: string | number
+    RPCUrl: string;
+    config?: Config;
+    fee?: string | number;
   }
 ) => {
-
-
   const txSkeleton = await capacity_buildTxSkeletonWithOutWitness(
     fromAddress,
     toAddress,
     amount,
     options
-  )
-
+  );
 
   if (txSkeleton) {
     const result = assembleWitnesses_joyID(
       txSkeleton,
       addressToLockScript(fromAddress, DefaultConfig.TestnetConig)
-    )
-    console.log(result);
+    );
+    console.log(txSkeleton, result);
 
     if (result) {
-      const witnessIdx = result.witnessIdx
-      const rawTx = createRawTransaction(txSkeleton)
+      const witnessIdx = result.witnessIdx;
+      const rawTx = createRawTransaction(txSkeleton);
 
-      return { rawTx, witnessIdx }
+      return { rawTx, witnessIdx };
     }
   }
-}
+};
