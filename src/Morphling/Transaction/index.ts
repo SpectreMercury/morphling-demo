@@ -15,6 +15,7 @@ import { assembleWitnesses_joyID } from "../base/witness";
 export const collecteCell = async (
   address: string,
   RPCUrl: string,
+  amount: string,
   config?: Config,
   typeScript?: Script
 ) => {
@@ -32,9 +33,12 @@ export const collecteCell = async (
     //@ts-ignore
     type: typeScript ? typeScript : "empty",
   });
-
+  let collectedSum = BI.from(0);
+  let amountInShannon = BI.from(parseFloat(amount) * 10 ** 8)
   for await (const cell of collector.collect()) {
-    collectCells.push(cell);
+      collectedSum = collectedSum.add(cell.cellOutput.capacity);
+      collectCells.push(cell);
+      if (BI.from(collectedSum).gte(amountInShannon)) break;
   }
 
   return collectCells;
@@ -77,7 +81,7 @@ export const getCellsDepByScript = (
 export const capacity_buildTxSkeletonWithOutWitness = async (
   fromAddress: string,
   toAddress: string,
-  amount: string | number,
+  amount: string,
   options: {
     RPCUrl: string;
     config?: Config;
@@ -87,8 +91,7 @@ export const capacity_buildTxSkeletonWithOutWitness = async (
   const env = fromAddress.slice(0, 3);
   const isMainnet = env === "ckt" ? false : true;
 
-  const cells = await collecteCell(fromAddress, options.RPCUrl, options.config);
-
+  const cells = await collecteCell(fromAddress, options.RPCUrl, amount, options.config);
   const inputs: Cell[] = [];
   const outputs: Cell[] = [];
   const inputSinces: { [key: number]: string } = {};
@@ -262,7 +265,7 @@ rpc.sendTransaction(signedTx, 'passthrough');
 export const capacity_createRawTransactionForJoyID = async (
   fromAddress: string,
   toAddress: string,
-  amount: string | number,
+  amount: string,
   options: {
     RPCUrl: string;
     config?: Config;
