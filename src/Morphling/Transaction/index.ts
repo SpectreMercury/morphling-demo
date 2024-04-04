@@ -98,6 +98,8 @@ export const capacity_buildTxSkeletonWithOutWitness = async (
     ? BI.from(parseUnit(options.fee.toString(), "ckb"))
     : MAX_FEE;
   const sendAmount = BI.from(parseUnit(amount.toString(), "ckb"));
+  // TODO this cell min count
+  const minCapacity = BI.from(parseUnit("62", "ckb"));
 
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
@@ -106,12 +108,12 @@ export const capacity_buildTxSkeletonWithOutWitness = async (
     payAmount = payAmount.add(cell.cellOutput.capacity);
     inputSinces[i] = "0x0";
 
-    if (payAmount.gte(sendAmount.add(fee))) {
+    if (payAmount.gte(sendAmount.add(fee).add(minCapacity))) {
       break;
     }
   }
 
-  if (payAmount.lt(sendAmount.add(fee))) {
+  if (payAmount.lt(sendAmount.add(fee).add(minCapacity))) {
     return;
   }
 
@@ -123,7 +125,14 @@ export const capacity_buildTxSkeletonWithOutWitness = async (
     },
   });
 
-  const changeAmount = payAmount.sub(sendAmount).sub(fee);
+  const changeAmount = payAmount.sub(sendAmount).sub(fee).sub(minCapacity);
+  console.log(
+    "change amount",
+    changeAmount.toString(),
+    payAmount.toString(),
+    sendAmount.toString()
+  );
+
   if (changeAmount.gt(0)) {
     outputs.push({
       data: "0x",
