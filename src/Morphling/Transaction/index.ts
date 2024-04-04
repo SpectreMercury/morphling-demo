@@ -34,11 +34,11 @@ export const collecteCell = async (
     type: typeScript ? typeScript : "empty",
   });
   let collectedSum = BI.from(0);
-  let amountInShannon = BI.from(parseFloat(amount) * 10 ** 8)
+  let amountInShannon = BI.from(parseFloat(amount) * 10 ** 8);
   for await (const cell of collector.collect()) {
-      collectedSum = collectedSum.add(cell.cellOutput.capacity);
-      collectCells.push(cell);
-      if (BI.from(collectedSum).gte(amountInShannon)) break;
+    collectedSum = collectedSum.add(cell.cellOutput.capacity);
+    collectCells.push(cell);
+    if (BI.from(collectedSum).gte(amountInShannon)) break;
   }
 
   return collectCells;
@@ -91,7 +91,12 @@ export const capacity_buildTxSkeletonWithOutWitness = async (
   const env = fromAddress.slice(0, 3);
   const isMainnet = env === "ckt" ? false : true;
 
-  const cells = await collecteCell(fromAddress, options.RPCUrl, amount, options.config);
+  const cells = await collecteCell(
+    fromAddress,
+    options.RPCUrl,
+    amount,
+    options.config
+  );
   const inputs: Cell[] = [];
   const outputs: Cell[] = [];
   const inputSinces: { [key: number]: string } = {};
@@ -147,7 +152,10 @@ export const capacity_buildTxSkeletonWithOutWitness = async (
   }
 
   const cellDeps: CellDep[] = [];
-  const fromScript = addressToLockScript(toAddress, DefaultConfig.TestnetConig);
+  const fromScript = addressToLockScript(
+    fromAddress,
+    DefaultConfig.TestnetConig
+  );
   const toScript = addressToLockScript(toAddress, DefaultConfig.TestnetConig);
 
   const fromCellDep = getCellsDepByScript(fromScript, {
